@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>jjesboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:           #04060f;
+      --glass:        rgba(255,255,255,0.04);
+      --glass-h:      rgba(255,255,255,0.065);
+      --border:       rgba(255,255,255,0.08);
+      --border-h:     rgba(255,255,255,0.15);
+      --blue:         #3b82f6;
+      --cyan:         #06b6d4;
+      --emerald:      #10b981;
+      --violet:       #8b5cf6;
+      --amber:        #f59e0b;
+      --red:          #ef4444;
+      --txt:          #e2e8f0;
+      --muted:        #475569;
+      --dimmer:       #1e293b;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--txt);
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* ─── BACKGROUND ─── */
+    #bg-wrap { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0;
+      animation: orbIn 2s ease forwards;
+    }
+    .orb-1 { width: 600px; height: 600px; top: -200px; left: -150px; background: radial-gradient(circle, rgba(59,130,246,0.18), transparent 70%); animation-delay: 0.1s; animation: orbIn 2s ease 0.1s forwards, float1 20s ease-in-out 2.1s infinite; }
+    .orb-2 { width: 500px; height: 500px; bottom: -150px; right: -100px; background: radial-gradient(circle, rgba(139,92,246,0.14), transparent 70%); animation: orbIn 2s ease 0.3s forwards, float2 24s ease-in-out 2.3s infinite; }
+    .orb-3 { width: 350px; height: 350px; top: 50%; left: 50%; transform: translate(-50%,-50%); background: radial-gradient(circle, rgba(6,182,212,0.08), transparent 70%); animation: orbIn 2s ease 0.5s forwards, float3 18s ease-in-out 2.5s infinite; }
+
+    @keyframes orbIn  { to { opacity: 1; } }
+    @keyframes float1 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(40px,-30px)} 66%{transform:translate(-20px,20px)} }
+    @keyframes float2 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(-30px,40px)} 66%{transform:translate(20px,-20px)} }
+    @keyframes float3 { 0%,100%{transform:translate(-50%,-50%)} 50%{transform:translate(-45%,-55%)} }
+
+    .bg-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+      background-size: 52px 52px;
+    }
+
+    /* Scanline shimmer */
+    .scanline {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.005) 3px, rgba(255,255,255,0.005) 4px);
+      pointer-events: none;
+    }
+
+    /* ─── GLASS CARDS ─── */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(28px) saturate(150%);
+      -webkit-backdrop-filter: blur(28px) saturate(150%);
+      border-radius: 18px;
+      transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+      will-change: transform;
+    }
+    .card:hover {
+      background: var(--glass-h);
+      border-color: var(--border-h);
+      transform: translateY(-2px);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    }
+
+    /* Card entrance */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .c1 { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
+    .c2 { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+    .c3 { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.34s both; }
+
+    /* ─── HEADER ─── */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(4,6,15,0.75);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .logo-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-radius: 10px;
+      display: grid; place-items: center;
+      box-shadow: 0 0 18px rgba(59,130,246,0.35);
+    }
+
+    /* ─── PILLS ─── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 11px; border-radius: 100px;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .p-blue   { background: rgba(59,130,246,0.14); color: #93c5fd; border: 1px solid rgba(59,130,246,0.28); }
+    .p-green  { background: rgba(16,185,129,0.14); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.28); }
+    .p-violet { background: rgba(139,92,246,0.14); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.28); }
+    .p-amber  { background: rgba(245,158,11,0.14); color: #fcd34d; border: 1px solid rgba(245,158,11,0.28); }
+    .p-dim    { background: rgba(71,85,105,0.18);  color: var(--muted); border: 1px solid rgba(71,85,105,0.3); }
+    .p-red    { background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.28); }
+
+    /* Live dot */
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--emerald);
+      animation: pulse 2s ease-out infinite;
+      flex-shrink: 0;
+    }
+    .dot-red { background: var(--red); }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+      70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+
+    /* ─── SECTION LABELS ─── */
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* ─── TEMP DISPLAY ─── */
+    .temp {
+      font-family: 'Syne', sans-serif;
+      font-size: 64px; font-weight: 800;
+      line-height: 1; letter-spacing: -3px;
+      background: linear-gradient(135deg, #e2e8f0 20%, #93c5fd 70%, #67e8f9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ─── ICON BOX ─── */
+    .icon-box {
+      width: 80px; height: 80px;
+      border-radius: 22px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.22);
+      display: grid; place-items: center;
+      font-size: 42px;
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.4s ease;
+      box-shadow: 0 0 0 0 rgba(59,130,246,0);
+    }
+    .icon-box:hover {
+      transform: scale(1.08) rotate(-5deg);
+      box-shadow: 0 0 30px rgba(59,130,246,0.2);
+    }
+
+    /* ─── STAT BOX ─── */
+    .stat {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+    .stat:hover { border-color: rgba(255,255,255,0.14); }
+
+    /* ─── DIVIDER ─── */
+    .hr { height: 1px; background: var(--border); }
+
+    /* ─── REFRESH BTN ─── */
+    .btn-ref {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: 10px;
+      font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+      color: #93c5fd;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.22);
+      cursor: pointer; outline: none;
+      transition: all 0.22s ease;
+    }
+    .btn-ref:hover {
+      background: rgba(59,130,246,0.2);
+      border-color: rgba(59,130,246,0.45);
+      box-shadow: 0 0 16px rgba(59,130,246,0.18);
+      transform: translateY(-1px);
+    }
+    .btn-ref:active { transform: none; }
+    .btn-ref:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ref.spin svg { animation: rotate 0.7s linear infinite; }
+    @keyframes rotate { to { transform: rotate(360deg); } }
+
+    /* ─── CURRENCY ROWS ─── */
+    .cur-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.045);
+      transition: padding-left 0.2s ease;
+    }
+    .cur-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .cur-row:hover { padding-left: 5px; }
+
+    .cur-icon {
+      width: 36px; height: 36px; border-radius: 11px;
+      display: grid; place-items: center;
+      font-size: 16px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0;
+    }
+
+    /* ─── NEWS CARDS ─── */
+    .news-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex; flex-direction: column; gap: 10px;
+      text-decoration: none; color: inherit;
+    }
+    .news-item:hover {
+      background: rgba(255,255,255,0.055);
+      border-color: rgba(59,130,246,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(59,130,246,0.12) inset;
+    }
+    .news-item h3 {
+      font-size: 13px; font-weight: 600; line-height: 1.5;
+      color: var(--txt);
+      transition: color 0.2s;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .news-item:hover h3 { color: #93c5fd; }
+
+    /* ─── SKELETON ─── */
+    .skel {
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 300% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
+
+    /* ─── ERROR TOAST ─── */
+    .err-box {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.22);
+      border-radius: 12px; padding: 12px 16px;
+      font-size: 12px; color: #fca5a5;
+      display: none; align-items: center; gap: 8px;
+      margin-top: 14px;
+    }
+    .err-box.show { display: flex; }
+
+    /* ─── MONO ─── */
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      background: rgba(4,6,15,0.5);
+    }
+  </style>
+</head>
+<body>
+
+<!-- BG -->
+<div id="bg-wrap">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="bg-grid"></div>
+  <div class="scanline"></div>
+</div>
+
+<div class="relative z-10 flex flex-col min-h-screen">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="px-6 sm:px-8 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+
+      <div class="flex items-center gap-3">
+        <div class="logo-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+        </div>
+        <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-0.5px;">jjesboard</span>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap justify-end">
+        <div class="pill p-dim mono" id="clock">00:00:00</div>
+        <div class="pill p-green"><div class="dot"></div>Live</div>
+        <div class="pill p-blue mono" id="req-count">0 req</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="flex-1 px-6 sm:px-8 py-10">
+    <div class="max-w-6xl mx-auto space-y-10">
+
+      <!-- Page heading -->
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4" style="animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1) 0s both;">
+        <div>
+          <div class="pill p-violet mb-3">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+            Astana · KZ
+          </div>
+          <h1 style="font-family:'Syne',sans-serif;font-size:clamp(28px,5vw,42px);font-weight:800;letter-spacing:-2px;line-height:1.05;">
+            Control Panel
+          </h1>
+          <p style="color:var(--muted);font-size:13px;margin-top:6px;">Персональный дэшборд · FastAPI + Live APIs</p>
+        </div>
+        <p class="mono text-xs" style="color:var(--muted);" id="last-updated">— ожидание данных —</p>
+      </div>
+
+      <!-- ── TOP ROW: Weather + Currency ── -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- ══ WEATHER ══ -->
+        <div class="card p-7 c1" id="weather-card">
+
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 0 1 0 9Z"/></svg>
+              <span class="section-label">Погода</span>
+            </div>
+            <button class="btn-ref" id="w-btn" onclick="fetchWeather()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              Обновить
+            </button>
+          </div>
+
+          <div class="flex items-center gap-5 mb-6">
+            <div class="icon-box" id="w-icon">🌤️</div>
+            <div>
+              <div class="temp" id="w-temp">—°</div>
+              <div style="font-size:15px;color:var(--muted);margin-top:2px;" id="w-cond">Загрузка...</div>
+            </div>
+          </div>
+
+          <div class="hr mb-5"></div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="stat">
+              <div class="section-label mb-1">Город</div>
+              <div style="font-size:13px;font-weight:600;" id="w-city">—</div>
+            </div>
+            <div class="stat">
+              <div class="section-label mb-1">Источник</div>
+              <div class="mono" style="font-size:12px;color:#93c5fd;">wttr.in</div>
+            </div>
+            <div class="stat">
+              <div class="section-label mb-1">Статус</div>
+              <div style="font-size:12px;font-weight:600;" id="w-status">⏳ wait</div>
+            </div>
+          </div>
+
+          <div class="err-box" id="w-err">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Не удалось получить данные от <span class="mono">/weather</span>
+          </div>
+        </div>
+
+        <!-- ══ CURRENCY ══ -->
+        <div class="card p-7 c2" id="currency-card">
+
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <span class="section-label">Курсы к KZT</span>
+            </div>
+            <button class="btn-ref" id="c-btn" onclick="fetchCurrency()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              Обновить
+            </button>
+          </div>
+
+          <!-- Skeleton initial -->
+          <div id="c-skeleton">
+            <div class="skel" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
+            <div class="skel" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
+            <div class="skel" style="height:44px;border-radius:12px;"></div>
+          </div>
+
+          <div id="c-list" style="display:none;"></div>
+
+          <div class="err-box" id="c-err">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Не удалось получить данные от <span class="mono">/currency</span>
+          </div>
+
+          <div class="hr mt-5 mb-4"></div>
+          <div class="flex items-center gap-2">
+            <div class="mono text-xs" style="color:var(--muted);">src: exchangerate-api.com</div>
+            <div class="pill p-green" style="font-size:10px;padding:2px 8px;"><div class="dot" style="width:5px;height:5px;"></div>Real-time</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NEWS ── -->
+      <div class="card p-7 c3">
+
+        <div class="flex items-center justify-between mb-7">
+          <div class="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+            <span class="section-label">Tech News Feed</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="mono text-xs" style="color:var(--muted);" id="news-src">newsapi.org</span>
+            <button class="btn-ref" id="n-btn" onclick="fetchNews()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              Обновить
+            </button>
+          </div>
+        </div>
+
+        <!-- Skeleton -->
+        <div id="n-skeleton" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="skel" style="height:140px;border-radius:14px;"></div>
+          <div class="skel" style="height:140px;border-radius:14px;"></div>
+          <div class="skel" style="height:140px;border-radius:14px;"></div>
+        </div>
+
+        <div id="n-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style="display:none;"></div>
+
+        <div class="err-box" id="n-err">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Не удалось получить новости от <span class="mono">/news</span>. Проверь NewsAPI ключ.
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="px-6 sm:px-8 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <span class="mono text-xs" style="color:var(--muted);">jjesboard · FastAPI</span>
+      <div class="flex items-center gap-3">
+        <span class="mono text-xs" style="color:var(--muted);">127.0.0.1:8000</span>
+        <div class="pill p-blue" style="font-size:10px;padding:2px 8px;">v2.0</div>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /wrapper -->
+
+<script>
+/* ─── CONFIG ─── */
+const API = '';  // '' = same origin (работает через FastAPI StaticFiles)
+
+let requestCount = 0;
+function countReq() {
+  requestCount++;
+  document.getElementById('req-count').textContent = requestCount + ' req';
+}
+
+/* ─── CLOCK ─── */
+function tick() {
+  const t = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  document.getElementById('clock').textContent = t;
+}
+setInterval(tick, 1000); tick();
+
+function tsNow() {
+  return new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function updateTs() {
+  document.getElementById('last-updated').textContent = 'обновлено в ' + tsNow();
+}
+
+/* ─── WEATHER ICON MAP ─── */
+function wIcon(c = '') {
+  c = c.toLowerCase();
+  if (c.includes('clear') || c.includes('sunny'))  return '☀️';
+  if (c.includes('partly cloudy'))                  return '⛅';
+  if (c.includes('cloud') || c.includes('overcast'))return '☁️';
+  if (c.includes('thunder') || c.includes('storm')) return '⛈️';
+  if (c.includes('drizzle'))                         return '🌦️';
+  if (c.includes('rain') || c.includes('shower'))   return '🌧️';
+  if (c.includes('snow') || c.includes('blizzard')) return '❄️';
+  if (c.includes('fog') || c.includes('mist'))      return '🌫️';
+  if (c.includes('wind'))                            return '💨';
+  return '🌤️';
+}
+
+/* ─── WEATHER ─── */
+async function fetchWeather() {
+  const btn = document.getElementById('w-btn');
+  const errEl = document.getElementById('w-err');
+  btn.classList.add('spin'); btn.disabled = true;
+  errEl.classList.remove('show');
+  document.getElementById('w-status').textContent = '⏳ loading';
+  countReq();
+
+  try {
+    const r = await fetch(API + '/weather');
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+
+    document.getElementById('w-icon').textContent = wIcon(d.condition);
+    document.getElementById('w-temp').textContent  = d.temp || '—°';
+    document.getElementById('w-cond').textContent  = d.condition || '—';
+    document.getElementById('w-city').textContent  = d.city || '—';
+    document.getElementById('w-status').innerHTML  = '<span style="color:#6ee7b7;">✓ ok</span>';
+    updateTs();
+  } catch(e) {
+    document.getElementById('w-status').innerHTML = '<span style="color:#fca5a5;">✗ error</span>';
+    errEl.classList.add('show');
+  } finally {
+    btn.classList.remove('spin'); btn.disabled = false;
+  }
+}
+
+/* ─── CURRENCY ─── */
+const CUR_META = {
+  USD: { label: 'Доллар США', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)' },
+  EUR: { label: 'Евро',       color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.25)' },
+  RUB: { label: 'Рубль',      color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' },
+};
+
+async function fetchCurrency() {
+  const btn = document.getElementById('c-btn');
+  const list = document.getElementById('c-list');
+  const skel = document.getElementById('c-skeleton');
+  const errEl = document.getElementById('c-err');
+  btn.classList.add('spin'); btn.disabled = true;
+  errEl.classList.remove('show');
+  countReq();
+
+  try {
+    const r = await fetch(API + '/currency');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (!data.length) throw new Error('empty');
+
+    list.innerHTML = data.map(c => {
+      const m = CUR_META[c.code] || { label: c.name, color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.25)' };
+      return `
+        <div class="cur-row">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="cur-icon" style="background:${m.bg};border:1px solid ${m.border};color:${m.color};">${c.symbol}</div>
+            <div>
+              <div style="font-size:14px;font-weight:600;">${c.code}</div>
+              <div style="font-size:11px;color:var(--muted);">${m.label}</div>
+            </div>
+          </div>
+          <div class="mono" style="font-size:15px;font-weight:700;color:#6ee7b7;">${c.rate}</div>
+        </div>`;
+    }).join('');
+
+    skel.style.display = 'none';
+    list.style.display = 'block';
+    updateTs();
+  } catch(e) {
+    skel.style.display = 'none';
+    errEl.classList.add('show');
+  } finally {
+    btn.classList.remove('spin'); btn.disabled = false;
+  }
+}
+
+/* ─── NEWS ─── */
+const TAG_COLORS = {
+  tech:    { bg: 'rgba(59,130,246,0.15)',   color: '#93c5fd',  border: 'rgba(59,130,246,0.3)'   },
+  error:   { bg: 'rgba(239,68,68,0.12)',    color: '#fca5a5',  border: 'rgba(239,68,68,0.3)'    },
+  default: { bg: 'rgba(139,92,246,0.12)',   color: '#c4b5fd',  border: 'rgba(139,92,246,0.3)'   },
+};
+
+async function fetchNews() {
+  const btn  = document.getElementById('n-btn');
+  const list = document.getElementById('n-list');
+  const skel = document.getElementById('n-skeleton');
+  const errEl= document.getElementById('n-err');
+  btn.classList.add('spin'); btn.disabled = true;
+  errEl.classList.remove('show');
+  countReq();
+
+  try {
+    const r = await fetch(API + '/news');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (!data.length) throw new Error('empty');
+
+    list.innerHTML = data.map(n => {
+      const tagKey = (n.tag || '').toLowerCase();
+      const tc = TAG_COLORS[tagKey] || TAG_COLORS.default;
+      const href = n.url && n.url !== '#' ? `href="${n.url}" target="_blank" rel="noopener"` : '';
+      return `
+        <a class="news-item" ${href}>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span class="mono" style="font-size:9px;font-weight:700;letter-spacing:0.1em;padding:3px 9px;border-radius:100px;background:${tc.bg};color:${tc.color};border:1px solid ${tc.border};">${(n.tag||'?').toUpperCase()}</span>
+            <span class="mono" style="font-size:10px;color:var(--muted);">${n.time || ''}</span>
+          </div>
+          <h3>${n.title || 'Без заголовка'}</h3>
+          <div style="font-size:11px;color:var(--muted);margin-top:auto;">${n.source || ''}</div>
+        </a>`;
+    }).join('');
+
+    skel.style.display = 'none';
+    list.style.display = 'grid';
+    updateTs();
+  } catch(e) {
+    skel.style.display = 'none';
+    errEl.classList.add('show');
+  } finally {
+    btn.classList.remove('spin'); btn.disabled = false;
+  }
+}
+
+/* ─── AUTO-LOAD ─── */
+fetchWeather();
+fetchCurrency();
+fetchNews();
+</script>
+</body>
+</html>
